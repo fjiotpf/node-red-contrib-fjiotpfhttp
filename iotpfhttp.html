@@ -1,0 +1,241 @@
+<!--
+  Copyright JS Foundation and other contributors, http://js.foundation
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+-->
+<!--
+    FUJITSU LIMITED 2018
+    v1.0 2018/3/17 Tomohiro Nakajima : First release,Create parameters for IoT Platform
+
+
+-->
+
+
+<!-- 2018.03.06 Fujitsu modified : start-->
+<script type="text/x-red" data-template-name="iotpf http">
+    <div class="form-row">
+        <label for="node-input-name">Name</label>
+        <input type="text" id="node-input-name">
+    </div>
+
+    <div class="form-row">
+	<label for="node-input-method">
+	Method
+	</label>
+        <select type="text" id="node-input-method" style="width:70%;">
+        <option value="GET">GET</option>
+        <option value="PUT">PUT</option>
+        <option value="POST">POST</option>
+        <option value="DELETE">DELETE</option>
+        </select>
+    </div>
+    <div class="form-row">
+	<label for="node-input-baseurl">
+	Base URI
+	</label>
+        
+	<input id="node-input-baseurl" type="text" placeholder="http://<zone>.fujitsu.com/">
+    </div>
+
+    <div class="form-row">
+	<label for="node-input-apiv">
+	API version</label>
+	<input id="node-input-apiv" type="text" placeholder="v1">
+    </div>
+
+    <div class="form-row">
+	<label for="node-input-tenantid">
+	Tenant ID</label>
+	<input id="node-input-tenantid" type="text" placeholder="">
+    </div>
+
+    <div class="form-row">
+	<label for="node-input-resource">
+		Resource
+	</label>
+	<input id="node-input-resource" type="text" placeholder="test">
+    </div>
+
+    <div class="form-row">
+	<label for="node-input-query">
+		Query
+	</label>
+	<input id="node-input-query" type="text" placeholder="_past?$filter=sensor%20eq%2010">
+    </div>
+    <div class="form-row">
+	<label for="node-input-accesscode">
+		Access Code
+	</label>
+	<input id="node-input-accesscode" type="text" placeholder="trialAcc">
+    </div>
+
+    <div class="form-row">
+        <input type="checkbox" id="node-input-usetls" style="display: inline-block; width: auto; vertical-align: top;">
+        use TLS</label>
+        <div id="node-row-tls" class="hide">
+            <label style="width: auto; margin-left: 20px; margin-right: 10px;" for="node-input-tls">
+		use TLS
+	    </label><input type="text" style="width: 300px" id="node-input-tls">
+        </div>
+    </div>
+
+    <div class="form-row">
+        <label for="node-input-ret">OutputFormat</label>
+        <select type="text" id="node-input-ret" style="width:70%;">
+        <option value="txt">Strings</option>
+        <option value="bin">Binary</option>
+        <option value="obj">JSON</option>
+        </select>
+    </div>
+
+
+</script>
+
+<script type="text/x-red" data-help-name="iotpf http">
+    <p>Sends REST API for FUJITSU Cloud Service K5 IoT Platform and returns the response.</p>
+    <h3>Inputs</h3>
+    <dl class="message-properties">
+    	<!-- IoT Platform Information -->
+        <dt>method <span class="property-type">string</span></dt>
+        <dd>Method (ex. GET POST PUT)</dd>
+
+        <dt>baseUrl <span class="property-type">string</span></dt>
+        <dd>Base URL (ex. http://zone.jp.fujitsu.com) </dd>
+
+        <dt>apiVersion <span class="property-type">string</span></dt>
+        <dd>API Version (ex. v1) </dd>
+
+        <dt>tenantId <span class="property-type">string</span></dt>
+        <dd>Tenant ID (ex. FJIOT-001) </dd>
+  
+        <dt>resource <span class="property-type">string</span></dt>
+        <dd>resource path (ex. kamata/1F/temperature) </dd>
+
+        <dt>query <span class="property-type">string</span></dt>
+        <dd>query (ex. _past?$filter=sensor%20lt%2030) </dd>
+
+        <dt>accessCode <span class="property-type">string</span></dt>
+        <dd>Access Code (ex. AccessCode0213) </dd>
+
+        <dt>payload <span class="property-type">string | object | buffer</span>  </dt>
+        <dd>Sent as the body of the request.</dd>
+
+        <!-- 20180317 rejectUnauthorized is deprecated -->
+        <!--
+        <dt>rejectUnauthorized</dt>
+        <dd>If set to <code>true</code>, allows requests to be made to https sites that use
+            self signed certificates.</dd>
+        -->
+    </dl>
+    <h3>Outputs</h3>
+    <dl class="message-properties">
+        <dt>payload <span class="property-type">string | object | buffer</span></dt>
+        <dd>The body of the response. The node can be configured to return the body
+             as a string, attempt to parse it as a JSON string or leave it as a
+             binary buffer.</dd>
+        <dt>statusCode <span class="property-type">number</span></dt>
+        <dd>The status code of the response, or the error code if the request could not be completed.</dd>
+        <dt>headers <span class="property-type">object</span></dt>
+        <dd>An object containing the response headers.</dd>
+        <dt>responseUrl <span class="property-type">string</span></dt>
+        <dd>In case any redirects occurred while processing the request, this property is the final redirected url.
+            Otherwise, the url of the original request.</dd>
+        <dt>responseCookies <span class="property-type">object</span></dt>
+        <dd>If the response includes cookies, this propery is an object of name/value pairs for each cookie.</dd>
+    </dl>
+
+
+</script>
+<!-- 2018.03.06 Fujitsu modified :end-->
+
+
+<script type="text/javascript">
+    RED.nodes.registerType('iotpf http',{
+        category: 'function',
+        color:"rgb(231, 231, 174)",
+        defaults: {
+            name: {value:""},
+            method:{value:"GET"},
+            ret: {value:"txt"},
+            baseurl:{value:"",validate:function(v) { return (v.trim().length === 0) || (v.indexOf("://") === -1) || (v.trim().indexOf("http") === 0)} },
+            tls: {type:"tls-config",required: false},
+            tenantid: {value: ""},
+            apiv: {value: "v1"},
+            resource: {value: ""},
+            query: {value: ""},
+            accesscode: {value:""}
+        },
+        credentials: {
+            user: {type:"text"},
+            password: {type: "password"}
+        },
+        inputs:1,
+        outputs:1,
+        outputLabels: function(i) {
+            return ({txt:"UTF8 string", bin:"binary buffer", obj:"parsed JSON object"}[this.ret]);
+        },
+        icon: "icon_iot.png",
+        label: function() {
+            return this.name||this._("IoTPF HTTP");
+        },
+        labelStyle: function() {
+            return this.name?"node_label_italic":"";
+        },
+        oneditprepare: function() {
+            $("#node-input-useAuth").change(function() {
+                if ($(this).is(":checked")) {
+                    $(".node-input-useAuth-row").show();
+                } else {
+                    $(".node-input-useAuth-row").hide();
+                    $('#node-input-user').val('');
+                    $('#node-input-password').val('');
+                }
+            });
+            if (this.credentials.user || this.credentials.has_password) {
+                $('#node-input-useAuth').prop('checked', true);
+            } else {
+                $('#node-input-useAuth').prop('checked', false);
+            }
+            $("#node-input-useAuth").change();
+
+            function updateTLSOptions() {
+                if ($("#node-input-usetls").is(':checked')) {
+                    $("#node-row-tls").show();
+                } else {
+                    $("#node-row-tls").hide();
+                }
+            }
+            if (this.tls) {
+                $('#node-input-usetls').prop('checked', true);
+            } else {
+                $('#node-input-usetls').prop('checked', false);
+            }
+            updateTLSOptions();
+            $("#node-input-usetls").on("click",function() {
+                updateTLSOptions();
+            });
+            $("#node-input-ret").change(function() {
+                if ($("#node-input-ret").val() === "obj") {
+                    $("#tip-json").show();
+                } else {
+                    $("#tip-json").hide();
+                }
+            });
+        },
+        oneditsave: function() {
+            if (!$("#node-input-usetls").is(':checked')) {
+                $("#node-input-tls").val("_ADD_");
+            }
+        }
+    });
+</script>
