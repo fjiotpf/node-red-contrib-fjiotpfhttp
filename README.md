@@ -12,5 +12,5 @@ To send binary data of 5 MB or more is not supported
 Using metadata of resource data(x-iotpf-meta-data1,x-iotpf-meta-data2,x-iotpf-meta-data3) is not supported
 
 ### References
-You can read more about FUJITSU Cloud Service K5 IoT Platform Document [here](https://iot-docs.jp-east-1.paas.cloud.global.fujitsu.com/en/manual/).
+You can read more about FUJITSU Cloud Service K5 IoT Platform Document [here(English)](https://iot-docs.jp-east-1.paas.cloud.global.fujitsu.com/en/manual/), [here(Japanese)](https://iot-docs.jp-east-1.paas.cloud.global.fujitsu.com/ja/manual/).
 
