@@ -1,6 +1,6 @@
 {
   "name": "node-red-contrib-fjiotpfhttp",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "A node to call REST API for FUJITSU Cloud Service K5 IoT Platform",
   "main": "iotpfhttp.js",
   "dependencies": {
