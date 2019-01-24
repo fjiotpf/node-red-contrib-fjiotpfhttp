@@ -16,7 +16,8 @@
 <!--
     FUJITSU LIMITED 2018
     v1.0 2018/3/17 Tomohiro Nakajima : First release,Create parameters for IoT Platform
-
+    v1.1 2019/01/24 Tomohiro Nakajima : HTTPS(using tls) request via Proxy is supported
+                                        BaseURI placeholder is fixed
 
 -->
 
@@ -44,7 +45,7 @@
 	Base URI
 	</label>
         
-	<input id="node-input-baseurl" type="text" placeholder="http://<zone>.fujitsu.com/">
+	<input id="node-input-baseurl" type="text" placeholder="http://<zone>.fujitsu.com">
     </div>
 
     <div class="form-row">
@@ -102,7 +103,7 @@
 </script>
 
 <script type="text/x-red" data-help-name="iotpf http">
-    <p>Sends REST API for FUJITSU Cloud Service K5 IoT Platform and returns the response.</p>
+    <p>Sends REST API for FUJITSU Cloud Service for OSS IoT Platform and returns the response.</p>
     <h3>Inputs</h3>
     <dl class="message-properties">
     	<!-- IoT Platform Information -->

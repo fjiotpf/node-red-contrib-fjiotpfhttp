@@ -21,9 +21,7 @@
 
 module.exports = function(RED) {
     "use strict";
-    var http = require("follow-redirects").http;
-    var https = require("follow-redirects").https;
-    var urllib = require("url");
+    var request = require("request");
     var mustache = require("mustache");
     var querystring = require("querystring");
     var cookie = require("cookie");
@@ -88,12 +86,12 @@ module.exports = function(RED) {
             }
             // 2018.03.17 END
 
-
             node.status({fill:"blue",shape:"dot",text:"httpin.status.requesting"});
+            
             // create nodeUrl form baseurl and apiv and tenantid and resource and query
             if(query === ""){
                 nodeUrl = baseurl + "/" + apiv + "/" + tenantid + "/" + resource;
-            }else{
+            } else {
                 nodeUrl = baseurl + "/" + apiv + "/" + tenantid + "/" + resource + "/" +  query;
             }
             //node.warn(RED._("URL is >>" + nodeUrl));
@@ -131,13 +129,17 @@ module.exports = function(RED) {
             //    method = msg.method.toUpperCase();          // use the msg parameter
             //}
             
-            var opts = urllib.parse(url);
+            var opts = {};
+            opts.url = url;
+            opts.timeout = node.reqTimeout;
             opts.method = method;
             opts.headers = {};
+            opts.encoding = null;  // Force NodeJs to return a Buffer (instead of a string)
+            opts.maxRedirects = 21;
             var ctSet = "Content-Type"; // set default camel case
             var clSet = "Content-Length";
             if (msg.headers) {
-		if (msg.headers.hasOwnProperty('x-node-red-request-node')) {
+                if (msg.headers.hasOwnProperty('x-node-red-request-node')) {
                     var headerHash = msg.headers['x-node-red-request-node'];
                     delete msg.headers['x-node-red-request-node'];
                     var hash = hashSum(msg.headers);
@@ -147,7 +149,7 @@ module.exports = function(RED) {
                 }
                 if (msg.headers) {
                     for (var v in msg.headers) {
-			  if (msg.headers.hasOwnProperty(v)) {
+                        if (msg.headers.hasOwnProperty(v)) {
                             var name = v.toLowerCase();
                             if (name !== "content-type" && name !== "content-length") {
                                 // only normalise the known headers used later in this
@@ -160,6 +162,9 @@ module.exports = function(RED) {
                         }
                     }
                 }
+            }
+            if (msg.hasOwnProperty('followRedirects')) {
+                opts.followRedirect = msg.followRedirects;
             }
             if (msg.cookies) {
                 var cookies = [];
@@ -184,30 +189,32 @@ module.exports = function(RED) {
                 }
             }
             if (this.credentials && this.credentials.user) {
-                opts.auth = this.credentials.user+":"+(this.credentials.password||"");
+                opts.auth = {
+                    user: this.credentials.user,
+                    pass: this.credentials.password||""
+                }
             }
-            var payload = null;
 
             if (typeof msg.payload !== "undefined" && (method == "POST" || method == "PUT" || method == "PATCH" ) ) {
                 if (typeof msg.payload === "string" || Buffer.isBuffer(msg.payload)) {
-                    payload = msg.payload;
+                    opts.body = msg.payload;
                 } else if (typeof msg.payload == "number") {
-                    payload = msg.payload+"";
+                    opts.body = msg.payload + "";
                 } else {
                     if (opts.headers['content-type'] == 'application/x-www-form-urlencoded') {
-                        payload = querystring.stringify(msg.payload);
+                        opts.body = querystring.stringify(msg.payload);
                     } else {
-                        payload = JSON.stringify(msg.payload);
+                        opts.body = JSON.stringify(msg.payload);
                         if (opts.headers['content-type'] == null) {
                             opts.headers[ctSet] = "application/json";
                         }
                     }
                 }
                 if (opts.headers['content-length'] == null) {
-                    if (Buffer.isBuffer(payload)) {
-                        opts.headers[clSet] = payload.length;
+                    if (Buffer.isBuffer(opts.body)) {
+                        opts.headers[clSet] = opts.body.length;
                     } else {
-                        opts.headers[clSet] = Buffer.byteLength(payload);
+                        opts.headers[clSet] = Buffer.byteLength(opts.body);
                     }
                 }
             }
@@ -220,8 +227,8 @@ module.exports = function(RED) {
                 opts.headers[clSet] = opts.headers['content-length'];
                 delete opts.headers['content-length'];
             }
-	    //put accesscode in Header area. 
-	    opts.headers['Authorization'] = "Bearer " + accesscode;	   
+            //put accesscode in Header area. 
+            opts.headers['Authorization'] = "Bearer " + accesscode;	   
             var urltotest = url;
             var noproxy;
             if (noprox) {
@@ -232,62 +239,46 @@ module.exports = function(RED) {
             if (prox && !noproxy) {
                 var match = prox.match(/^(http:\/\/)?(.+)?:([0-9]+)?/i);
                 if (match) {
-                    //opts.protocol = "http:";
-                    //opts.host = opts.hostname = match[2];
-                    //opts.port = (match[3] != null ? match[3] : 80);
-                    opts.headers['Host'] = opts.host;
-                    var heads = opts.headers;
-                    var path = opts.pathname = opts.href;
-                    opts = urllib.parse(prox);
-                    opts.path = opts.pathname = path;
-                    opts.headers = heads;
-                    opts.method = method;
-                    urltotest = match[0];
-                    if (opts.auth) {
-                        opts.headers['Proxy-Authorization'] = "Basic "+new Buffer(opts.auth).toString('Base64')
-                    }
+                    opts.proxy = prox;
+                } else {
+                    node.warn("Bad proxy url: "+prox);
+                    opts.proxy = null;
                 }
-                else { node.warn("Bad proxy url: "+process.env.http_proxy); }
             }
             if (tlsNode) {
                 tlsNode.addTLSOptions(opts);
             }
-            var req = ((/^https/.test(urltotest))?https:http).request(opts,function(res) {
-                // Force NodeJs to return a Buffer (instead of a string)
-                // See https://github.com/nodejs/node/issues/6038
-                res.setEncoding(null);
-                delete res._readableState.decoder;
-
-                msg.statusCode = res.statusCode;
-                msg.headers = res.headers;
-                msg.responseUrl = res.responseUrl;
-                msg.payload = [];
-
-                if (msg.headers.hasOwnProperty('set-cookie')) {
-                    msg.responseCookies = {};
-                    msg.headers['set-cookie'].forEach(function(c) {
-                        var parsedCookie = cookie.parse(c);
-                        var eq_idx = c.indexOf('=');
-                        var key = c.substr(0, eq_idx).trim()
-                        parsedCookie.value = parsedCookie[key];
-                        delete parsedCookie[key];
-                        msg.responseCookies[key] = parsedCookie;
-
-                    })
-
-                }
-                msg.headers['x-node-red-request-node'] = hashSum(msg.headers);
-                // msg.url = url;   // revert when warning above finally removed
-                res.on('data',function(chunk) {
-                    if (!Buffer.isBuffer(chunk)) {
-                        // if the 'setEncoding(null)' fix above stops working in
-                        // a new Node.js release, throw a noisy error so we know
-                        // about it.
-                        throw new Error("HTTP Request data chunk not a Buffer");
+            request(opts, function(err, res, body) {
+                if(err) {
+                    if(err.code === 'ETIMEDOUT' || err.code === 'ESOCKETTIMEDOUT') {
+                        node.error(RED._("common.notification.errors.no-response"), msg);
+                        node.status({fill:"red", shape:"ring", text:"common.notification.errors.no-response"});
+                    }else{
+                        node.error(err,msg);
+                        node.status({fill:"red", shape:"ring", text:err.code});
                     }
-                    msg.payload.push(chunk);
-                });
-                res.on('end',function() {
+                    msg.payload = err.toString() + " : " + url;
+                    msg.statusCode = err.code;
+                    node.send(msg);
+                }else{
+                    msg.statusCode = res.statusCode;
+                    msg.headers = res.headers;
+                    msg.responseUrl = res.request.uri.href;
+                    msg.payload = body;
+                    
+                    if (msg.headers.hasOwnProperty('set-cookie')) {
+                        msg.responseCookies = {};
+                        msg.headers['set-cookie'].forEach(function(c) {
+                            var parsedCookie = cookie.parse(c);
+                            var eq_idx = c.indexOf('=');
+                            var key = c.substr(0, eq_idx).trim();
+                            parsedCookie.value = parsedCookie[key];
+                            delete parsedCookie[key];
+                            msg.responseCookies[key] = parsedCookie;
+                        });
+                    }
+                    msg.headers['x-node-red-request-node'] = hashSum(msg.headers);
+                    // msg.url = url;   // revert when warning above finally removed
                     if (node.metric()) {
                         // Calculate request time
                         var diff = process.hrtime(preRequestTimestamp);
@@ -298,46 +289,21 @@ module.exports = function(RED) {
                             node.metric("size.bytes", msg, res.client.bytesRead);
                         }
                     }
-
-                    // Check that msg.payload is an array - if the req error
-                    // handler has been called, it will have been set to a string
-                    // and the error already handled - so no further action should
-                    // be taken. #1344
-                    if (Array.isArray(msg.payload)) {
-                        // Convert the payload to the required return type
-                        msg.payload = Buffer.concat(msg.payload); // bin
-                        if (node.ret !== "bin") {
-                            msg.payload = msg.payload.toString('utf8'); // txt
-
-                            if (node.ret === "obj") {
-                                try { msg.payload = JSON.parse(msg.payload); } // obj
-                                catch(e) { node.warn(RED._("httpin.errors.json-error")); }
-                            }
+                    
+                    // Convert the payload to the required return type
+                    if (node.ret !== "bin") {
+                        msg.payload = msg.payload.toString('utf8'); // txt
+                        
+                        if (node.ret === "obj") {
+                            try { msg.payload = JSON.parse(msg.payload); } // obj
+                            catch(e) { node.warn(RED._("httpin.errors.json-error")); }
                         }
-
-                        node.send(msg);
-                        node.status({});
                     }
-                });
+                    node.status({});
+                    node.send(msg);
+                }
             });
-            req.setTimeout(node.reqTimeout, function() {
-                node.error(RED._("common.notification.errors.no-response"),msg);
-                setTimeout(function() {
-                    node.status({fill:"red",shape:"ring",text:"common.notification.errors.no-response"});
-                },10);
-                req.abort();
-            });
-            req.on('error',function(err) {
-                node.error(err,msg);
-                msg.payload = err.toString() + " : " + url;
-                msg.statusCode = err.code;
-                node.send(msg);
-                node.status({fill:"red",shape:"ring",text:err.code});
-            });
-            if (payload) {
-                req.write(payload);
-            }
-            req.end();
+            
         });
 
         this.on("close",function() {
@@ -346,7 +312,7 @@ module.exports = function(RED) {
     }
 
     RED.nodes.registerType("iotpf http",HTTPRequest,{
-	credentials: {
+        credentials: {
             user: {type:"text"},
             password: {type: "password"}
         }
