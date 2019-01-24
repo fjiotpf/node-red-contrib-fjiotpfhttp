@@ -15,8 +15,12 @@
  **/
 
 /**
-    FUJITSU LIMITED 2018
-    v1.0 2018/3/17 Tomohiro Nakajima : First release,Create parameters for IoT Platform
+    FUJITSU LIMITED 2018-2019
+    v0.1.2 2018/3/17 Tomohiro Nakajima : First release,Create parameters for IoT Platform
+    v0.2.0 2019/1/24 Tomohiro Nakajima : HTTPS(using tls) request via Proxy is supported
+                                         BaseURI placeholder is fixed
+
+
  **/
 
 module.exports = function(RED) {
